@@ -24,7 +24,7 @@
 
 ### 三、Usage 使用
 
-​	双击即可运行程序。程序首次运行会生成`.\config\config.json`和`.\config\favicon.ico`两个必需的文件。其中`.\config\config.json`为设置文件，完整内容如下：
+​	双击即可运行程序。程序首次运行会生成`.\config\config.json`,`.\config\language.json`和`.\config\favicon.ico`三个个必需的文件。其中`.\config\config.json`为设置文件，完整内容如下：
 
 ```json
 {
@@ -60,6 +60,8 @@
 
 ​	壁纸支持使用文件路径作为URL，但是适应性较差*(可能会受路径中存在的特定字符影响)*，强烈建议将壁纸文件放在本地的文件服务器上(会在release里自带一个)，使用本地回环地址`http://127.0.0.1`进行访问，较为稳定。本地服务器的可执行文件若在启动时需要传参的，可以先写成`.bat`文件，之后将config中的启动路径设为`.bat`文件的路径。
 
+​	`.\config\language.json`为语言文件，键为不同位置的文本，值为文本的替换内容。目前有的版本如下：(`zh-cn`,`en-us`)使用不同语言文件替换`.\config\language.json`即可完成语言的切换。
+
 ### 四、Build 编译打包
 
 ​	使用pyinstaller将本程序打包为exe:
@@ -74,7 +76,7 @@ pyinstaller main.py -F -i favicon.ico -w -n LightWallPaper
 
 ### 五、Plan 更新计划
 
-- [ ] 将UI中的中文提取成为单独的文件
+- [x] 将UI中的中文提取成为单独的文件
 - [ ] 优化内置icon文件的存储方式(目前偷懒,保存为了Base64字符串)
 - [ ] 提高软件的可调节性，开放更多UI风格调节的选项
 - [ ] 优化URL输入时的协议自动补全
