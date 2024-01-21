@@ -51,15 +51,59 @@ setting = {
     "block_set":False
 }
 
+language = {
+    'add_wp' : '添加壁纸',
+    'del_wp' : '删除壁纸',
+    'apply_wp' : '应用壁纸',
+    'restore_wp' : '还原壁纸',
+    'setting' : '设置',
+    'close' : '退出软件',
+    'home' : '显示主页',
+    'apply' : '确认更改',
+    'warnning' : '警告',
+    'error' : '错误',
+    'setting_block' : '设置已锁定',
+    'sure_del' : '您确定要删除标签',
+    'wp_empty' : '无选中壁纸标签',
+    'has_min' : '已经最小化到系统托盘',
+    'tag_name' : '标签名称',
+    'wp_url' : '壁纸URL或绝对路径',
+    'wp_startup' : '预启动文件',
+    'unsuccessful' : '您的修改未成功',
+    'edit' : '编辑',
+    'new_value' : '新的值',
+    'non_empty_name' : '标签名称不能为空',
+    'non_empty_url' : '壁纸链接不能为空',
+    'notfound' : '您指定的预启动文件不存在',
+    'sure_cover' : '您确定要覆盖标签',
+    'sentting_of' : '的设置吗',
+    'opt' : {
+            'zoom':'网页缩放(0~2)',
+            'alpha':'主页透明度(0~1)',
+            'font':'字体文件路径',
+            'font_size':'字体大小',
+            "width":'主页窗口宽度',
+            "height":'主页窗口高度',
+            "theme_colour":"主题色(#十六进制)",
+            "auto_apply":"自动接管壁纸",
+            "show_home":"启动显示主页"
+        }
+}
+
 if not os.path.isfile(filepath+'config.json'):
-    with open(filepath+'config.json','w',encoding='utf-8') as g:g.write(json.dumps(setting))
+    with open(filepath+'config.json','w',encoding='utf-8') as g:g.write(json.dumps(setting, indent=4))
 
 with open(filepath+'config.json','r',encoding='utf-8') as g:setting.update(json.loads(g.read()))
-with open(filepath+'config.json','w',encoding='utf-8') as g:g.write(json.dumps(setting))
+with open(filepath+'config.json','w',encoding='utf-8') as g:g.write(json.dumps(setting, indent=4))
 
 if not os.path.isfile(setting['icon']):
     import mkicon
     mkicon.mkicon(setting['icon'])
+
+if not os.path.isfile(filepath+'language.json'):
+    with open(filepath+'language.json','w',encoding='utf-8') as g:g.write(json.dumps(language, indent=4,ensure_ascii=False))
+
+with open(filepath+'language.json','r',encoding='utf-8') as g:language.update(json.loads(g.read()))
 
 class WebEngineView(QWebEngineView):
     def __init__(self, parent=None):
@@ -154,35 +198,35 @@ class Window(QWidget):
 
         # 底部按钮
         self.button_add = QPushButton()
-        self.button_add.setText("添加壁纸")
+        self.button_add.setText(f" {language['add_wp']} ")
         self.button_add.clicked.connect(self.add_background)
         self.button_add.setFont(QFont(self.fontFamily,setting['font_size'],QFont.Black))
         self.button_add.setStyleSheet('QPushButton{color:#EEE;background-color:#313131;padding: 7px 15px;}QPushButton:hover{background:#111;color:'+setting["theme_colour"]+'}')
         self.layouter.addWidget(self.button_add)
 
         self.button_apply = QPushButton()
-        self.button_apply.setText("应用壁纸")
+        self.button_apply.setText(f" {language['apply_wp']} ")
         self.button_apply.clicked.connect(self.apply_background)
         self.button_apply.setFont(QFont(self.fontFamily,setting['font_size'],QFont.Black))
         self.button_apply.setStyleSheet('QPushButton{color:#EEE;background-color:#313131;padding: 7px 15px;}QPushButton:hover{background:#111;color:'+setting["theme_colour"]+'}')
         self.layouter.addWidget(self.button_apply)
 
         self.button_remove = QPushButton()
-        self.button_remove.setText("还原壁纸")
+        self.button_remove.setText(f" {language['restore_wp']} ")
         self.button_remove.clicked.connect(self.close_background)
         self.button_remove.setFont(QFont(self.fontFamily,setting['font_size'],QFont.Black))
         self.button_remove.setStyleSheet('QPushButton{color:#EEE;background-color:#313131;padding: 7px 15px;}QPushButton:hover{background:#111;color:'+setting["theme_colour"]+'}')
         self.layouter.addWidget(self.button_remove)
 
         self.button_set = QPushButton()
-        self.button_set.setText("设置")
+        self.button_set.setText(f" {language['setting']} ")
         self.button_set.clicked.connect(self.global_set)
         self.button_set.setFont(QFont(self.fontFamily,setting['font_size'],QFont.Black))
         self.button_set.setStyleSheet('QPushButton{color:#EEE;background-color:#313131;padding: 7px 15px;}QPushButton:hover{background:#111;color:'+setting["theme_colour"]+'}')
         self.layouter.addWidget(self.button_set)
 
         self.button_del = QPushButton()
-        self.button_del.setText("删除壁纸")
+        self.button_del.setText(f" {language['del_wp']} ")
         self.button_del.clicked.connect(self.del_background)
         self.button_del.setFont(QFont(self.fontFamily,setting['font_size'],QFont.Black))
         self.button_del.setStyleSheet('QPushButton{color:#EEE;background-color:#412121;padding: 7px 15px;}QPushButton:hover{background:#111;color:'+setting["theme_colour"]+'}')
@@ -193,13 +237,13 @@ class Window(QWidget):
         self.tray_icon.setIcon(QIcon(setting['icon']))
         self.icon_menu = QMenu()
         if not setting['block_home']:
-            action_show  = QAction(qtawesome.icon('fa.home', color='white'), '显示主页', self, triggered=self.show)
+            action_show  = QAction(qtawesome.icon('fa.home', color='white'), f'{language["home"]}', self, triggered=self.show)
             self.icon_menu.addAction(action_show)
-        action_quit  = QAction(qtawesome.icon('fa.sign-out', color='white'), '退出软件', self, triggered=sys.exit)
+        action_quit  = QAction(qtawesome.icon('fa.sign-out', color='white'), f'{language["close"]}', self, triggered=sys.exit)
         self.icon_menu.addAction(action_quit)
-        action_bgon  = QAction(qtawesome.icon('fa.toggle-on', color='white'), '开启壁纸', self, triggered=self.apply_background)
+        action_bgon  = QAction(qtawesome.icon('fa.toggle-on', color='white'), f'{language["apply_wp"]}', self, triggered=self.apply_background)
         self.icon_menu.addAction(action_bgon)
-        action_bgoff = QAction(qtawesome.icon('fa.window-close-o', color='white'), '关闭壁纸', self, triggered=self.close_background)
+        action_bgoff = QAction(qtawesome.icon('fa.window-close-o', color='white'), f'{language["restore_wp"]}', self, triggered=self.close_background)
         self.icon_menu.addAction(action_bgoff)
         self.icon_menu.setStyleSheet('QMenu{color:#DDD;background-color:#222;selection-color:'+setting["theme_colour"]+'}')
         self.tray_icon.setContextMenu(self.icon_menu)
@@ -222,8 +266,8 @@ class Window(QWidget):
             msgBox = QMessageBox()
             msgBox.setWindowIcon(QIcon(setting["icon"]))
             msgBox.setIcon(QMessageBox.Warning)
-            msgBox.setText(f'设置已锁定')
-            msgBox.setWindowTitle("警告")
+            msgBox.setText(f'{language["setting_block"]}')
+            msgBox.setWindowTitle(f"{language['warnning']}")
             msgBox.setStandardButtons(QMessageBox.Ok)
             msgBox.exec()
             return None
@@ -236,8 +280,8 @@ class Window(QWidget):
         msgBox = QMessageBox()
         msgBox.setWindowIcon(QIcon(setting["icon"]))
         msgBox.setIcon(QMessageBox.Warning)
-        msgBox.setText(f'您确定要删除标签:"{item.text()}"吗?')
-        msgBox.setWindowTitle("警告")
+        msgBox.setText(f'{language["sure_del"]}:"{item.text()}"?')
+        msgBox.setWindowTitle(f"{language['warnning']}")
         msgBox.setStandardButtons(QMessageBox.Ok | QMessageBox.Cancel)
         returnValue = msgBox.exec()
         if returnValue == QMessageBox.Cancel:return None
@@ -248,7 +292,7 @@ class Window(QWidget):
             setting["page"]     = setting["page_dic"][list(setting["page_dic"].keys())[0]]["url"]
             setting["start_up"] = setting["page_dic"][list(setting["page_dic"].keys())[0]]["exe"]
         else:setting["page"] = setting["start_up"] = ""
-        with open(filepath+'config.json','w',encoding='utf-8') as g:g.write(json.dumps(setting))
+        with open(filepath+'config.json','w',encoding='utf-8') as g:g.write(json.dumps(setting, indent=4))
 
     def add_background(self):
         self.input_window = input_window()
@@ -261,22 +305,22 @@ class Window(QWidget):
                 msgBox = QMessageBox()
                 msgBox.setWindowIcon(QIcon(setting["icon"]))
                 msgBox.setIcon(QMessageBox.Critical)
-                msgBox.setText(f'无选中壁纸标签')
-                msgBox.setWindowTitle("错误")
+                msgBox.setText(f'{language["wp_empty"]}')
+                msgBox.setWindowTitle(f"{language['error']}")
                 msgBox.setStandardButtons(QMessageBox.Ok)
                 msgBox.exec()
                 return None
             self.bg_on_flag = True
             self.wall_paper = Background()
             self.wall_paper.show()
-            with open(filepath+'config.json','w',encoding='utf-8') as g:g.write(json.dumps(setting))
+            with open(filepath+'config.json','w',encoding='utf-8') as g:g.write(json.dumps(setting, indent=4))
         except Exception as e:log(e)
 
     def close_background(self):
         if self.bg_on_flag:self.wall_paper.quit()
 
     def closeEvent(self, event):
-        self.tray_icon.showMessage(setting['name'], f'{setting["name"]}已经最小化到系统托盘', QIcon(setting['icon']))
+        self.tray_icon.showMessage(setting['name'], f'{setting["name"]} {language["has_min"]}', QIcon(setting['icon']))
 
 class input_window(QWidget):
     global setting
@@ -306,24 +350,24 @@ class input_window(QWidget):
         # 输入内容
         self.line_name = QLineEdit(self)
         self.line_name.setStyleSheet('QLineEdit{color:#EEE;background-color:#313131;padding: 7px 15px;}')
-        self.line_name.setPlaceholderText("标签名称")
+        self.line_name.setPlaceholderText(f"{language['tag_name']}")
         self.line_name.setFont(QFont(self.fontFamily,setting['font_size'],QFont.Black))
         self.layouter.addWidget(self.line_name)
 
         self.line_url = QLineEdit(self)
         self.line_url.setStyleSheet('QLineEdit{color:#EEE;background-color:#313131;padding: 7px 15px;}')
-        self.line_url.setPlaceholderText("壁纸URL或绝对路径")
+        self.line_url.setPlaceholderText(f"{language['wp_url']}")
         self.line_url.setFont(QFont(self.fontFamily,setting['font_size'],QFont.Black))
         self.layouter.addWidget(self.line_url)
 
         self.line_exe = QLineEdit(self)
         self.line_exe.setStyleSheet('QLineEdit{color:#EEE;background-color:#313131;padding: 7px 15px;}')
-        self.line_exe.setPlaceholderText("预启动文件")
+        self.line_exe.setPlaceholderText(f"{language['wp_startup']}")
         self.line_exe.setFont(QFont(self.fontFamily,setting['font_size'],QFont.Black))
         self.layouter.addWidget(self.line_exe)
 
         self.button_ok = QPushButton()
-        self.button_ok.setText("添加壁纸")
+        self.button_ok.setText(f"{language['add_wp']}")
         self.button_ok.clicked.connect(self.apply_change)
         self.button_ok.setFont(QFont(self.fontFamily,setting['font_size'],QFont.Black))
         self.button_ok.setStyleSheet('QPushButton{color:#EEE;background-color:#313131;padding: 7px 15px;}QPushButton:hover{background:#111;color:'+setting["theme_colour"]+'}')
@@ -340,8 +384,8 @@ class input_window(QWidget):
             msgBox = QMessageBox()
             msgBox.setWindowIcon(QIcon(setting["icon"]))
             msgBox.setIcon(QMessageBox.Critical)
-            msgBox.setText(f'标签名称不能为空')
-            msgBox.setWindowTitle("错误")
+            msgBox.setText(f'{language["non_empty_name"]}')
+            msgBox.setWindowTitle(f"{language['error']}")
             msgBox.setStandardButtons(QMessageBox.Ok)
             msgBox.exec()
             return None
@@ -349,8 +393,8 @@ class input_window(QWidget):
             msgBox = QMessageBox()
             msgBox.setWindowIcon(QIcon(setting["icon"]))
             msgBox.setIcon(QMessageBox.Warning)
-            msgBox.setText(f'您确定要覆盖标签:"{name}"的设置吗?')
-            msgBox.setWindowTitle("警告")
+            msgBox.setText(f'{language["sure_cover"]}:"{name}"{language["sentting_of"]}?')
+            msgBox.setWindowTitle(f"{language['warnning']}")
             msgBox.setStandardButtons(QMessageBox.Ok | QMessageBox.Cancel)
             returnValue = msgBox.exec()
             if returnValue == QMessageBox.Cancel:return None
@@ -358,8 +402,8 @@ class input_window(QWidget):
             msgBox = QMessageBox()
             msgBox.setWindowIcon(QIcon(setting["icon"]))
             msgBox.setIcon(QMessageBox.Critical)
-            msgBox.setText(f'壁纸链接不能为空')
-            msgBox.setWindowTitle("错误")
+            msgBox.setText(f'{language["non_empty_url"]}')
+            msgBox.setWindowTitle(f"{language['error']}")
             msgBox.setStandardButtons(QMessageBox.Ok)
             msgBox.exec()
             return None
@@ -367,8 +411,8 @@ class input_window(QWidget):
             msgBox = QMessageBox()
             msgBox.setWindowIcon(QIcon(setting["icon"]))
             msgBox.setIcon(QMessageBox.Critical)
-            msgBox.setText(f'您指定的预启动文件不存在')
-            msgBox.setWindowTitle("错误")
+            msgBox.setText(f'{language["notfound"]}')
+            msgBox.setWindowTitle(f"{language['error']}")
             msgBox.setStandardButtons(QMessageBox.Ok | QMessageBox.Close)
             returnValue = msgBox.exec()
             if returnValue == QMessageBox.Ok:return None
@@ -381,7 +425,7 @@ class input_window(QWidget):
         elif not prase.netloc and not prase.scheme:dic['url'] = 'http://' + dic['url']
 
         setting['page_dic'][name] = dic
-        with open(filepath+'config.json','w',encoding='utf-8') as g:g.write(json.dumps(setting))
+        with open(filepath+'config.json','w',encoding='utf-8') as g:g.write(json.dumps(setting, indent=4))
         setting["page"] = setting["page_dic"][name]["url"]
         setting["start_up"] = setting["page_dic"][name]["exe"]
         main_window.listwidget.clear()
@@ -392,7 +436,7 @@ class setting_window(QWidget):
     global setting
 
     def __init__(self):
-        global main_window,UI_STYLE
+        global main_window,UI_STYLE,language
 
         QWidget.__init__(self)
         # 输出控件
@@ -426,6 +470,7 @@ class setting_window(QWidget):
             "auto_apply":"自动接管壁纸",
             "show_home":"启动显示主页"
         }
+        self.opt_zh.update(language['opt'])
         self.zh_opt = dict(zip(self.opt_zh.values(), self.opt_zh.keys()))
         self.listwidget = QListWidget()
         for key in setting.keys():
@@ -438,7 +483,7 @@ class setting_window(QWidget):
 
 
         self.button_ok = QPushButton()
-        self.button_ok.setText("确认更改")
+        self.button_ok.setText(f"{language['apply']}")
         self.button_ok.clicked.connect(self.apply_change)
         self.button_ok.setFont(QFont(self.fontFamily,setting['font_size'],QFont.Black))
         self.button_ok.setStyleSheet('QPushButton{color:#EEE;background-color:#313131;padding: 7px 15px;}QPushButton:hover{background:#111;color:'+setting["theme_colour"]+'}')
@@ -449,14 +494,14 @@ class setting_window(QWidget):
         key = item.text().split(':')[0]
 
         self.setStyleSheet('')
-        value, ok = QInputDialog().getText(self,f'编辑:{key}', '新的值:')
+        value, ok = QInputDialog().getText(self,f'{language["edit"]}:{key}', f'{language["new_value"]}:')
         self.setStyleSheet(UI_STYLE)
         if not ok:
             msgBox = QMessageBox()
             msgBox.setWindowIcon(QIcon(setting["icon"]))
             msgBox.setIcon(QMessageBox.Information)
-            msgBox.setText(f'您的修改未成功')
-            msgBox.setWindowTitle("提示")
+            msgBox.setText(f'{language["unsuccessful"]}')
+            msgBox.setWindowTitle(f"{language['warnning']}")
             msgBox.setStandardButtons(QMessageBox.Ok)
             msgBox.exec()
             return None
@@ -478,8 +523,8 @@ class setting_window(QWidget):
             msgBox = QMessageBox()
             msgBox.setWindowIcon(QIcon(setting["icon"]))
             msgBox.setIcon(QMessageBox.Warning)
-            msgBox.setText(f'设置已锁定')
-            msgBox.setWindowTitle("警告")
+            msgBox.setText(f'{language["setting_block"]}')
+            msgBox.setWindowTitle(f"{language['warnning']}")
             msgBox.setStandardButtons(QMessageBox.Ok)
             msgBox.exec()
             self.close()
@@ -488,7 +533,7 @@ class setting_window(QWidget):
             self.close()
             return None
         setting.update(self.temp_opt)
-        with open(filepath+'config.json','w',encoding='utf-8') as g:g.write(json.dumps(setting))
+        with open(filepath+'config.json','w',encoding='utf-8') as g:g.write(json.dumps(setting, indent=4))
         self.close()
 
 def log(data):
