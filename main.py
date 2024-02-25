@@ -1,4 +1,4 @@
-from PyQt5.QtWebEngineWidgets import QWebEngineView,QWebEngineSettings,QWebEnginePage
+from PyQt5.QtWebEngineWidgets import QWebEngineView,QWebEngineSettings,QWebEnginePage, QWebEngineProfile
 from PyQt5.Qt import QUrl,QIcon
 import PyQt5.QtCore
 from PyQt5.QtWidgets import QListWidget,QGridLayout,QPushButton,QSystemTrayIcon,QMenu,QAction,QMessageBox,QLineEdit,QInputDialog
@@ -13,6 +13,7 @@ from pynput.mouse import Listener
 import requests
 import qtawesome
 from urllib.parse import urlparse
+import time
 
 UI_STYLE = '''
     background:#242424;
@@ -39,7 +40,6 @@ setting = {
     "zoom":1.25,
     "alpha":0.9,
     "icon":f"{filepath}/favicon.ico",
-    "name":"动态壁纸",
     "font":f"{filepath}/Alibaba-PuHuiTi-Regular.otf",
     "font_size":15,
     "width":480,
@@ -48,10 +48,16 @@ setting = {
     "auto_apply":True,
     "show_home":True,
     "block_home":False,
-    "block_set":False
+    "block_set":False,
+    "clear_storage":False,
+    "storage_path":"",
+    "auto_clear_level":3,
+    "auto_clear_rate":24,
+    "last_clear_time":0,
 }
 
 language = {
+    'name':'动态壁纸',
     'add_wp' : '添加壁纸',
     'del_wp' : '删除壁纸',
     'apply_wp' : '应用壁纸',
@@ -71,6 +77,7 @@ language = {
     'wp_startup' : '预启动文件',
     'unsuccessful' : '您的修改未成功',
     'edit' : '编辑',
+    'del_cache' : '清除缓存',
     'new_value' : '新的值',
     'non_empty_name' : '标签名称不能为空',
     'non_empty_url' : '壁纸链接不能为空',
@@ -105,6 +112,7 @@ if not os.path.isfile(filepath+'language.json'):
 
 with open(filepath+'language.json','r',encoding='utf-8') as g:language.update(json.loads(g.read()))
 
+# 浏览器
 class WebEngineView(QWebEngineView):
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -123,6 +131,7 @@ class WebEngineView(QWebEngineView):
     def onUrlChanged(self, url):
         self.setUrl(url)
 
+# 壁纸窗口
 class Background(QWidget):
     global setting
 
@@ -160,10 +169,12 @@ class Background(QWidget):
             win32api.SendMessage(self.winId(), win32con.WM_LBUTTONDOWN, win32con.MK_LBUTTON, pos)
             win32api.SendMessage(self.winId(), win32con.WM_LBUTTONUP, None, pos)
 
+
     def quit(self):
         self.listener.stop()
         self.close()
 
+# 主页
 class Window(QWidget):
     global setting
 
@@ -176,7 +187,7 @@ class Window(QWidget):
 
         self.setWindowOpacity(setting['alpha'])
         self.setWindowIcon(QIcon(setting["icon"]))
-        self.setWindowTitle(setting['name'])
+        self.setWindowTitle(language['name'])
         self.resize(setting['width'], setting['height'])
         self.bg_on_flag = False
 
@@ -250,6 +261,7 @@ class Window(QWidget):
         self.tray_icon.show()
         self.tray_icon.activated.connect(self.show_window)
 
+        self.wall_paper = None
         if setting['auto_apply']:self.apply_background()
 
     def show_window(self, reason):
@@ -317,11 +329,12 @@ class Window(QWidget):
         except Exception as e:log(e)
 
     def close_background(self):
-        if self.bg_on_flag:self.wall_paper.quit()
+        if self.bg_on_flag and self.wall_paper:self.wall_paper.quit()
 
     def closeEvent(self, event):
-        self.tray_icon.showMessage(setting['name'], f'{setting["name"]} {language["has_min"]}', QIcon(setting['icon']))
+        self.tray_icon.showMessage(language['name'], f'{language["name"]} {language["has_min"]}', QIcon(setting['icon']))
 
+# 新建壁纸窗口
 class input_window(QWidget):
     global setting
 
@@ -335,7 +348,7 @@ class input_window(QWidget):
 
         self.setWindowOpacity(setting['alpha'])
         self.setWindowIcon(QIcon(setting["icon"]))
-        self.setWindowTitle(setting['name'])
+        self.setWindowTitle(language['name'])
         self.resize(setting['width'], setting['height']//2)
         self.bg_on_flag = False
 
@@ -432,6 +445,7 @@ class input_window(QWidget):
         for item in setting["page_dic"].keys():main_window.listwidget.addItem(item)
         self.close()
 
+# 设置窗口
 class setting_window(QWidget):
     global setting
 
@@ -445,7 +459,7 @@ class setting_window(QWidget):
 
         self.setWindowOpacity(setting['alpha'])
         self.setWindowIcon(QIcon(setting["icon"]))
-        self.setWindowTitle(setting['name'])
+        self.setWindowTitle(language['name'])
         self.resize(setting['width'], setting['height'])
         self.bg_on_flag = False
 
@@ -468,7 +482,9 @@ class setting_window(QWidget):
             "height":'主页窗口高度',
             "theme_colour":"主题色(#十六进制)",
             "auto_apply":"自动接管壁纸",
-            "show_home":"启动显示主页"
+            "show_home":"启动显示主页",
+            "auto_clear_level":"自动清理等级",
+            "auto_clear_rate":"自动清理频率(单位:小时)"
         }
         self.opt_zh.update(language['opt'])
         self.zh_opt = dict(zip(self.opt_zh.values(), self.opt_zh.keys()))
@@ -481,6 +497,12 @@ class setting_window(QWidget):
         self.listwidget.setStyleSheet('QListWidget{color:#EEE;background-color:#313131;padding: 7px 15px;}')
         self.layouter.addWidget(self.listwidget)
 
+        self.button_del = QPushButton()
+        self.button_del.setText(f"{language['del_cache']}")
+        self.button_del.clicked.connect(self.clear_data)
+        self.button_del.setFont(QFont(self.fontFamily,setting['font_size'],QFont.Black))
+        self.button_del.setStyleSheet('QPushButton{color:#EEE;background-color:#313131;padding: 7px 15px;}QPushButton:hover{background:#111;color:'+setting["theme_colour"]+'}')
+        self.layouter.addWidget(self.button_del)
 
         self.button_ok = QPushButton()
         self.button_ok.setText(f"{language['apply']}")
@@ -488,6 +510,9 @@ class setting_window(QWidget):
         self.button_ok.setFont(QFont(self.fontFamily,setting['font_size'],QFont.Black))
         self.button_ok.setStyleSheet('QPushButton{color:#EEE;background-color:#313131;padding: 7px 15px;}QPushButton:hover{background:#111;color:'+setting["theme_colour"]+'}')
         self.layouter.addWidget(self.button_ok)
+
+    def clear_data(self):
+        clear_cache(setting['auto_clear_level'],True)
 
     def list_clicked(self, qmodelindex):
         item = self.listwidget.currentItem()
@@ -536,10 +561,38 @@ class setting_window(QWidget):
         with open(filepath+'config.json','w',encoding='utf-8') as g:g.write(json.dumps(setting, indent=4))
         self.close()
 
-def log(data):
-    if not os.path.isfile('./log,txt'):open('./log,txt','w').close()
-    with open('./log,txt','a',encoding='utf-8') as g:g.write(f'[ERROR] {data}\n')
+# LOG方法
+def log(data,msg_type:str = 'ERROR'):
+    if not os.path.isfile('./log.txt'):open('./log.txt','w').close()
+    with open('./log.txt','a',encoding='utf-8') as g:g.write(f'[{msg_type}] {data}\n')
 
+# 遍历文件
+def tree(dir_name) -> list:
+    res = []
+    for root, dirs, files in os.walk(dir_name):
+        for file in files:
+            res.append(file)
+
+    return res
+
+# 删除缓存
+def clear_cache(clear_level : int,clear_now : bool=False):
+    global setting
+    profile = QWebEngineProfile.defaultProfile()
+
+    if clear_level >= 1:profile.clearAllVisitedLinks()
+    if clear_level >= 2:profile.clearHttpCache()
+    if clear_level >= 3:
+        setting["storage_path"] = profile.persistentStoragePath()
+        if clear_now:setting["clear_storage"] = True
+    setting['last_clear_time'] = time.time()
+    with open(filepath+'config.json','w',encoding='utf-8') as g:g.write(json.dumps(setting, indent=4))
+
+def if_clear_cache() -> bool:
+    if time.time() - setting["last_clear_time"] >= 60*60*setting["auto_clear_rate"]:return True
+    else:return False
+
+# 获取壁纸窗口句柄
 def pretreatmentHandle():
     global hwnd_WorkW
     hwnd = win32gui.FindWindow("Progman", "Program Manager")
@@ -560,6 +613,13 @@ def pretreatmentHandle():
     return hwnd
 
 if __name__ == "__main__":
+    if (setting["clear_storage"] or (if_clear_cache() and setting["auto_clear_level"] >= 3)) and os.path.exists(setting["storage_path"]):
+        try:
+            for file in tree(setting["storage_path"]):os.remove(os.path.join(setting["storage_path"], file))
+        except Exception as e:log(e)
+        setting["clear_storage"] = False
+        with open(filepath+'config.json','w',encoding='utf-8') as g:g.write(json.dumps(setting, indent=4))
+
     if setting["start_up"]:
         try:requests.get(setting['page'],timeout=3)
         except:
@@ -568,11 +628,12 @@ if __name__ == "__main__":
                 win32api.ShellExecute(0, 'open',setting["start_up"].replace("/","\\"), '', '.\\', 0)
             else:pass
 
-
     PyQt5.QtCore.QCoreApplication.setAttribute(PyQt5.QtCore.Qt.AA_EnableHighDpiScaling)
     app = QApplication(sys.argv)
     app.setQuitOnLastWindowClosed(False)
-    #app.setStyle('Fusion')
+
+    if if_clear_cache():clear_cache(setting["auto_clear_level"])
+
     hwnd_background = pretreatmentHandle()
 
     main_window = Window()
