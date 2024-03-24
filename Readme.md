@@ -73,8 +73,6 @@
 pyinstaller main.py -F -i favicon.ico -w -n LightWallPaper 
 ```
 
-​	请不要使用`upx`进行压缩，在调试过程中发现，由于未知原因，有些版本的代码在使用upx压缩编译后的可执行文件无法正常地显示WebViewer，可以使用upx压缩的版本会在版本说明里进行备注。
-
 
 
 ### 五、Plan 更新计划
