@@ -11,15 +11,10 @@
 ​	**LightWallPaper**相较于其它壁纸引擎的不同之处在于以下几点：
 
 - 可以被打包成为单文件形式
-
 - 可以在启动时在后台隐藏地启动预设的可执行文件(`.exe`,`.bat`,`.vbs`...)
-
 - 单文件打包后小于 200 MB
-
 - 不会显示网络上其它壁纸等诸多其它服务，界面简单
-
 - 使用json格式存储设置，方便修改
-
 - 窗体图标与名称均支持自定义
 
 ### 三、Usage 使用
@@ -43,7 +38,6 @@
     "zoom": 1.25,   // HTML壁纸在WebViewer的缩放
     "alpha": 0.9,   // UI窗口的透明度
     "icon": "./config//favicon.ico",  // 窗口图标的路径(必须存在,否则无法在系统托盘创建图标)
-    "name": "动态壁纸",                // 软件的名称(窗口标题与系统信息标题)
     "font": "./config//Alibaba-PuHuiTi-Regular.otf",  // UI的字体(此处建议阿里巴巴普惠体)，可以留空
     "font_size": 15,  // UI的字符大小
     "width": 480,     // UI主页窗口的宽
@@ -53,6 +47,15 @@
     "show_home": true,   // 启动时自动显示主页
     "block_home": false, // 禁用显示主页
     "block_set": false   // 锁定UI界面的设置项修改功能
+    "clear_storage": false,  // 在下次启动时清除缓存
+    "storage_path": "",      // 缓存目录(启动后自动设定)
+    "auto_clear_level": 3,   // 清除等级(cookie,浏览记录,完全重置)
+    "auto_clear_rate": 24,   // 自动清除频率(单位:小时)
+    "last_clear_time": 1710677659.4013422,   // 上一次执行自动清除的时间(自动更新)
+    "guide_time": 3,        // 壁纸窗口位置检测周期(单位:秒)
+    "guide_reload": false,  // 是否刷新长时间无活动页面(无CPU和IO活动)
+    "debug_mode": false,    // 是否开启浏览器debug
+    "debug_port": 5566      // 浏览器debug端口
 }
 ```
 

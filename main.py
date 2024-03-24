@@ -1,27 +1,18 @@
-from PyQt5.QtWebEngineWidgets import QWebEngineView,QWebEngineSettings,QWebEnginePage, QWebEngineProfile
-from PyQt5.Qt import QUrl,QIcon
-import PyQt5.QtCore
-from PyQt5.QtWidgets import QListWidget,QGridLayout,QPushButton,QSystemTrayIcon,QMenu,QAction,QMessageBox,QLineEdit,QInputDialog
-from PyQt5.QtCore import QUrl, Qt, pyqtSignal ,QObject
-from PyQt5.QtWidgets import  QWidget, QApplication
-from PyQt5.QtGui import  QFontDatabase , QFont
-import win32gui,win32con,win32api
-from win32 import win32process
+from PyQt6.QtGui import QAction,QIcon
+from PyQt6.QtWidgets import QListWidget,QGridLayout,QPushButton,QSystemTrayIcon,QMenu,QMessageBox,QLineEdit,QInputDialog
+from PyQt6.QtWidgets import  QWidget, QApplication
+from PyQt6.QtGui import  QFontDatabase , QFont
+import pythoncom
+import win32api
 import os
 import sys
 import json
-from pynput.mouse import Listener
 import requests
 import qtawesome
 from urllib.parse import urlparse
-import time
-import psutil
-import threading
 
-
-DEBUG_PORT = '5588'
-DEBUG_URL = 'http://127.0.0.1:%s' % DEBUG_PORT
-os.environ['QTWEBENGINE_REMOTE_DEBUGGING'] = DEBUG_PORT
+from utils import *
+from bgengine import *
 
 UI_STYLE = '''
     background:#242424;
@@ -34,218 +25,6 @@ UI_STYLE = '''
     border-bottom-left-radius:10px;
     border-bottom-right-radius:10px;
 '''
-
-filepath = './config/'
-if not os.path.exists(filepath):os.mkdir(filepath)
-
-setting = {
-    "start_up":"./http-server.exe",
-    "page":"http://127.0.0.1:8080",
-    "page_dic":{
-        "测试服务器":{"url":"http://127.0.0.1:8080","exe":"./http-server.exe"},
-        "百度一下":{"url":"http://www.baidu.com" ,"exe":""}
-    },
-    "zoom":1.25,
-    "alpha":0.9,
-    "icon":f"{filepath}/favicon.ico",
-    "font":f"{filepath}/Alibaba-PuHuiTi-Regular.otf",
-    "font_size":15,
-    "width":480,
-    "height":640,
-    "theme_colour":"#39C5BB",
-    "auto_apply":True,
-    "show_home":True,
-    "block_home":False,
-    "block_set":False,
-    "clear_storage":False,
-    "storage_path":"",
-    "auto_clear_level":3,
-    "auto_clear_rate":24,
-    "last_clear_time":0,
-    "guide_time":3,
-    "guide_reload":True
-}
-
-language = {
-    'name':'动态壁纸',
-    'add_wp' : '添加壁纸',
-    'del_wp' : '删除壁纸',
-    'apply_wp' : '应用壁纸',
-    'restore_wp' : '还原壁纸',
-    'setting' : '设置',
-    'close' : '退出软件',
-    'home' : '显示主页',
-    'apply' : '确认更改',
-    'warnning' : '警告',
-    'error' : '错误',
-    'setting_block' : '设置已锁定',
-    'sure_del' : '您确定要删除标签',
-    'wp_empty' : '无选中壁纸标签',
-    'has_min' : '已经最小化到系统托盘',
-    'tag_name' : '标签名称',
-    'wp_url' : '壁纸URL或绝对路径',
-    'wp_startup' : '预启动文件',
-    'unsuccessful' : '您的修改未成功',
-    'edit' : '编辑',
-    'del_cache' : '清除缓存',
-    'new_value' : '新的值',
-    'non_empty_name' : '标签名称不能为空',
-    'non_empty_url' : '壁纸链接不能为空',
-    'notfound' : '您指定的预启动文件不存在',
-    'sure_cover' : '您确定要覆盖标签',
-    'sentting_of' : '的设置吗',
-    'opt' : {
-            'zoom':'网页缩放(0~2)',
-            'alpha':'主页透明度(0~1)',
-            'font':'字体文件路径',
-            'font_size':'字体大小',
-            "width":'主页窗口宽度',
-            "height":'主页窗口高度',
-            "theme_colour":"主题色(#十六进制)",
-            "auto_apply":"自动接管壁纸",
-            "show_home":"启动显示主页",
-            "guide_reload":"自动刷新无活动页面"
-        }
-}
-
-if not os.path.isfile(filepath+'config.json'):
-    with open(filepath+'config.json','w',encoding='utf-8') as g:g.write(json.dumps(setting, indent=4))
-
-with open(filepath+'config.json','r',encoding='utf-8') as g:setting.update(json.loads(g.read()))
-with open(filepath+'config.json','w',encoding='utf-8') as g:g.write(json.dumps(setting, indent=4))
-
-if not os.path.isfile(setting['icon']):
-    import mkicon
-    mkicon.mkicon(setting['icon'])
-
-if not os.path.isfile(filepath+'language.json'):
-    with open(filepath+'language.json','w',encoding='utf-8') as g:g.write(json.dumps(language, indent=4,ensure_ascii=False))
-
-with open(filepath+'language.json','r',encoding='utf-8') as g:language.update(json.loads(g.read()))
-
-# 浏览器
-class WebEngineView(QWebEngineView):
-    def __init__(self, parent=None):
-        super().__init__(parent)
-
-    def createWindow(self, windowType):
-        newView = WebEngineView(self)
-        newView.urlChanged.connect(self.onUrlChanged)
-        return newView
-
-    def acceptNavigationRequest(self, url, type, isMainFrame):
-        if type == QWebEnginePage.NavigationTypeLinkClicked:
-            self.load(url)
-            return False
-        return super().acceptNavigationRequest(url, type, isMainFrame)
-
-    def onUrlChanged(self, url):
-        self.setUrl(url)
-
-# 壁纸窗口
-class Background(QWidget):
-    global setting
-
-    def __init__(self,url = None):
-        global hwnd_background
-        super(Background, self).__init__()
-        self.setObjectName("MainWindow")
-        self.setWindowTitle(language['name']+'_Background')
-        self.resize(1920, 1080)
-        self.setWindowFlags(Qt.FramelessWindowHint)
-        self.setEnabled(True)
-
-        # webviewer初始化
-        size = self.geometry()
-        self.viewer = WebEngineView(self)
-        self.viewer.resize(size.width(),size.height())
-        self.viewer.settings().setAttribute(QWebEngineSettings.PluginsEnabled, True)
-        if url:
-            self.viewer.load(QUrl(url))
-            print(url)
-        else:self.viewer.load(QUrl(setting["page"]))
-        self.viewer.setZoomFactor(setting["zoom"])
-
-        #self.viewer.show()
-
-        # 设置为壁纸
-        hwnd_background = pretreatmentHandle()
-        self.win_hwnd = int(self.winId())
-        win32gui.SetParent(self.win_hwnd, hwnd_background)
-
-
-        # 监听鼠标事件(由于窗口位置在桌面下方,因此需要监听桌面的鼠标点击,然后转发给窗口)
-        self.listener = Listener(on_click=self.on_click)
-        self.listener.start()
-
-    def on_click(self,x, y, button, pressed):
-        global hwnd_WorkW
-        if win32gui.GetForegroundWindow() != hwnd_WorkW:return None
-        if pressed and str(button) == 'Button.left':
-            pos = win32api.MAKELONG(x, y)
-            win32api.SendMessage(self.winId(), win32con.WM_LBUTTONDOWN, win32con.MK_LBUTTON, pos)
-            win32api.SendMessage(self.winId(), win32con.WM_LBUTTONUP, None, pos)
-
-       
-
-    def quit(self):
-        self.listener.stop()
-        self.close()
-
-# 进程监视器
-class ProcessMonitor(QObject):
-    global hwnd_background,setting
-    signal = pyqtSignal(str)
-    def __init__(self,control:Background) -> None:
-        super(ProcessMonitor, self).__init__()
-        self.process_id = win32process.GetWindowThreadProcessId(int(control.win_hwnd))[-1]
-        self.process = None
-        self.if_stop = False
-        self.thread = threading.Thread(target=self.main)
-        self.control = control
-        self.IO = []
-        self.CPU = []
-
-
-    def get_process(self) -> bool:
-        for process in psutil.process_iter():
-            if process.pid == self.process_id:
-                self.process = process
-                return True
-        return False
-    
-    def start(self):
-        if not self.get_process():raise "Process not found"
-        self.thread.start()
-
-    def main(self):
-        global hwnd_background,setting
-        while True:
-            if self.if_stop:break
-            data = {}
-            data["Memory"] = self.process.memory_info().rss
-            data["PerCpu"] = self.process.cpu_percent()
-            data["Status"] = self.process.status()
-            data["IOdata"] = self.process.io_counters()
-            self.IO.append(sum(list(data["IOdata"])))
-            if len(self.IO) > 5:self.IO.pop(0)
-            self.CPU.append(data["PerCpu"])
-            if len(self.CPU) > 5:self.CPU.pop(0)
-            if setting["guide_reload"] and len(self.IO) >= 5 and len(self.CPU) >= 5 and ((all(self.CPU[0] == item for item in self.CPU) and self.CPU[0] < 0.5 )or all(self.IO[0] == item for item in self.IO)):
-                data["reload"] = [self.CPU[0], self.IO[0]]
-                data["url"] = self.control.viewer.url().toString()
-                log(json.dumps(data),msg_type='INFO')
-                self.signal.emit(data["url"])#
-            time.sleep(setting["guide_time"])
-            children = []
-            win32gui.EnumChildWindows(hwnd_background, lambda hwnd, param: param.append(hwnd), children)
-            if not self.control.win_hwnd in children:
-                hwnd_background = pretreatmentHandle()
-                win32gui.SetParent(self.control.win_hwnd, hwnd_background)
-                log(f"New parent window : {hwnd_background}",msg_type='INFO')
-                
-    def stop(self):
-        self.if_stop = True
 
 # 主页
 class Window(QWidget):
@@ -263,12 +42,12 @@ class Window(QWidget):
         self.setWindowTitle(language['name'])
         self.resize(setting['width'], setting['height'])
         self.bg_on_flag = False
+        self.really_close = False
 
         self.setStyleSheet(UI_STYLE)
 
         # 加载字体
-        fontDb = QFontDatabase()
-        font = fontDb.applicationFontFamilies(fontDb.addApplicationFont(setting['font']))
+        font = QFontDatabase.applicationFontFamilies(QFontDatabase.addApplicationFont(setting['font']))
         if font:self.fontFamily = font[0]
         else:self.fontFamily = None
 
@@ -316,6 +95,14 @@ class Window(QWidget):
         self.button_del.setStyleSheet('QPushButton{color:#EEE;background-color:#412121;padding: 7px 15px;}QPushButton:hover{background:#111;color:'+setting["theme_colour"]+'}')
         self.layouter.addWidget(self.button_del)
 
+        self.button_exit = QPushButton()
+        self.button_exit.setText(f" {language['close']} ")
+        self.button_exit.clicked.connect(self.app_quit)
+        self.button_exit.setFont(QFont(self.fontFamily,setting['font_size'],QFont.Black))
+        self.button_exit.setStyleSheet('QPushButton{color:#EEE;background-color:#313131;padding: 7px 15px;}QPushButton:hover{background:#111;color:'+setting["theme_colour"]+'}')
+        self.layouter.addWidget(self.button_exit)
+
+
         # 托盘菜单
         self.tray_icon = QSystemTrayIcon(self)
         self.tray_icon.setIcon(QIcon(setting['icon']))
@@ -338,9 +125,10 @@ class Window(QWidget):
         if setting['auto_apply']:self.apply_background()
 
     def show_window(self, reason):
-        if (reason == 2 or reason == 3) and not setting['block_home']:self.show()
+        if (reason == QSystemTrayIcon.ActivationReason.Trigger) and not setting['block_home']:self.show()
 
     def app_quit(self):
+        self.really_close = True
         if self.wall_paper:self.wall_paper.quit()
         if self.process_monitor:self.process_monitor.stop()
         QApplication.quit()
@@ -382,7 +170,8 @@ class Window(QWidget):
             setting["page"]     = setting["page_dic"][list(setting["page_dic"].keys())[0]]["url"]
             setting["start_up"] = setting["page_dic"][list(setting["page_dic"].keys())[0]]["exe"]
         else:setting["page"] = setting["start_up"] = ""
-        with open(filepath+'config.json','w',encoding='utf-8') as g:g.write(json.dumps(setting, indent=4))
+        save('config',setting)
+        #with open(filepath+'config.json','w',encoding='utf-8') as g:g.write(json.dumps(setting, indent=4))
 
     def add_background(self):
         self.input_window = input_window()
@@ -406,7 +195,7 @@ class Window(QWidget):
             self.process_monitor = ProcessMonitor(self.wall_paper)
             self.process_monitor.start()
             
-            with open(filepath+'config.json','w',encoding='utf-8') as g:g.write(json.dumps(setting, indent=4))
+            save('config',setting)
 
             self.process_monitor.signal.connect(self.apply_background)
         except Exception as e:log(e)
@@ -417,7 +206,7 @@ class Window(QWidget):
             self.process_monitor.stop()
 
     def closeEvent(self, event):
-        self.tray_icon.showMessage(language['name'], f'{language["name"]} {language["has_min"]}', QIcon(setting['icon']))
+        if not self.really_close:self.tray_icon.showMessage(language['name'], f'{language["name"]} {language["has_min"]}', QIcon(setting['icon']))
 
 # 新建壁纸窗口
 class input_window(QWidget):
@@ -440,8 +229,8 @@ class input_window(QWidget):
         self.setStyleSheet(UI_STYLE)
 
         # 加载字体
-        fontDb = QFontDatabase()
-        font = fontDb.applicationFontFamilies(fontDb.addApplicationFont(setting['font']))
+        #fontDb = QFontDatabase()
+        font = QFontDatabase.applicationFontFamilies(QFontDatabase.addApplicationFont(setting['font']))
         if font:self.fontFamily = font[0]
         else:self.fontFamily = None
 
@@ -523,7 +312,7 @@ class input_window(QWidget):
         elif not prase.netloc and not prase.scheme:dic['url'] = 'http://' + dic['url']
 
         setting['page_dic'][name] = dic
-        with open(filepath+'config.json','w',encoding='utf-8') as g:g.write(json.dumps(setting, indent=4))
+        save('config',setting)
         setting["page"] = setting["page_dic"][name]["url"]
         setting["start_up"] = setting["page_dic"][name]["exe"]
         main_window.listwidget.clear()
@@ -551,8 +340,7 @@ class setting_window(QWidget):
         self.setStyleSheet(UI_STYLE)
 
         # 加载字体
-        fontDb = QFontDatabase()
-        font = fontDb.applicationFontFamilies(fontDb.addApplicationFont(setting['font']))
+        font = QFontDatabase.applicationFontFamilies(QFontDatabase.addApplicationFont(setting['font']))
         if font:self.fontFamily = font[0]
         else:self.fontFamily = None
 
@@ -569,7 +357,8 @@ class setting_window(QWidget):
             "auto_apply":"自动接管壁纸",
             "show_home":"启动显示主页",
             "auto_clear_level":"自动清理等级",
-            "auto_clear_rate":"自动清理频率(单位:小时)"
+            "auto_clear_rate":"自动清理频率(单位:小时)",
+            "guide_reload":"自动刷新无活动页面"
         }
         self.opt_zh.update(language['opt'])
         self.zh_opt = dict(zip(self.opt_zh.values(), self.opt_zh.keys()))
@@ -643,77 +432,31 @@ class setting_window(QWidget):
             self.close()
             return None
         setting.update(self.temp_opt)
-        with open(filepath+'config.json','w',encoding='utf-8') as g:g.write(json.dumps(setting, indent=4))
+        save('config',setting)
         self.close()
 
-# LOG方法
-def log(data,msg_type:str = 'ERROR'):
-    if not os.path.isfile('./log.txt'):open('./log.txt','w').close()
-    with open('./log.txt','a',encoding='utf-8') as g:g.write(f'[{time.strftime("%Y-%m-%d_%H:%M:%S",time.localtime(time.time()))}][{msg_type}] {data}\n')
-
-# 遍历文件
-def tree(dir_name) -> list:
-    res = []
-    for root, dirs, files in os.walk(dir_name):
-        for file in files:
-            res.append(file)
-
-    return res
-
-# 删除缓存
-def clear_cache(clear_level : int,clear_now : bool=False):
+def main():
     global setting
-    profile = QWebEngineProfile.defaultProfile()
-
-    if clear_level >= 1:profile.clearAllVisitedLinks()
-    if clear_level >= 2:profile.clearHttpCache()
-    if clear_level >= 3:
-        setting["storage_path"] = profile.persistentStoragePath()
-        if clear_now:setting["clear_storage"] = True
-    setting['last_clear_time'] = time.time()
-    with open(filepath+'config.json','w',encoding='utf-8') as g:g.write(json.dumps(setting, indent=4))
-
-def if_clear_cache() -> bool:
-    if time.time() - setting["last_clear_time"] >= 60*60*setting["auto_clear_rate"]:return True
-    else:return False
-
-# 获取壁纸窗口句柄
-def pretreatmentHandle():
-    global hwnd_WorkW
-    hwnd = win32gui.FindWindow("Progman", "Program Manager")
-    win32gui.SendMessageTimeout(hwnd, 0x052C, 0, None, 0, 0x03E8)
-    hwnd_WorkW = None
-    while 1:
-        hwnd_WorkW = win32gui.FindWindowEx(None, hwnd_WorkW, "WorkerW", None)
-        if not hwnd_WorkW:continue
-        hView = win32gui.FindWindowEx(hwnd_WorkW, None, "SHELLDLL_DefView", None)
-        if not hView:continue
-        h = win32gui.FindWindowEx(None, hwnd_WorkW, "WorkerW", None)
-        while h:
-            win32gui.SendMessage(h, 0x0010, 0, 0)  # WM_CLOSE
-            h = win32gui.FindWindowEx(None, hwnd_WorkW, "WorkerW", None)
-        break
-
-    #print(h,hwnd,hwnd_WorkW,hView)
-    return hwnd
-
-if __name__ == "__main__":
+    init()
     if (setting["clear_storage"] or (if_clear_cache() and setting["auto_clear_level"] >= 3)) and os.path.exists(setting["storage_path"]):
         try:
             for file in tree(setting["storage_path"]):os.remove(os.path.join(setting["storage_path"], file))
         except Exception as e:log(e)
         setting["clear_storage"] = False
-        with open(filepath+'config.json','w',encoding='utf-8') as g:g.write(json.dumps(setting, indent=4))
+        save('config',setting)
 
     if setting["start_up"]:
         try:requests.get(setting['page'],timeout=3)
         except:
             if os.path.isfile(setting["start_up"]):
-                #os.system(f'start {setting["start_up"]}')
                 win32api.ShellExecute(0, 'open',setting["start_up"].replace("/","\\"), '', '.\\', 0)
             else:pass
 
-    PyQt5.QtCore.QCoreApplication.setAttribute(PyQt5.QtCore.Qt.AA_EnableHighDpiScaling)
+    if setting["debug_mode"]:
+        DEBUG_PORT = setting["debug_port"]
+        DEBUG_URL = 'http://127.0.0.1:%s' % DEBUG_PORT
+        os.environ['QTWEBENGINE_REMOTE_DEBUGGING'] = DEBUG_PORT
+
     app = QApplication(sys.argv)
     app.setQuitOnLastWindowClosed(False)
 
@@ -723,3 +466,6 @@ if __name__ == "__main__":
     if setting['show_home'] and not setting['block_home']:main_window.show()
 
     sys.exit(app.exec_())
+
+if __name__ == "__main__":
+    main()
