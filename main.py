@@ -6,7 +6,6 @@ import pythoncom
 import win32api
 import os
 import sys
-import json
 import requests
 import qtawesome
 from urllib.parse import urlparse
@@ -14,6 +13,7 @@ from urllib.parse import urlparse
 from utils import *
 from bgengine import *
 
+# 主窗口样式CSS
 UI_STYLE = '''
     background:#242424;
     border-top:1px solid #444444;
@@ -43,7 +43,6 @@ class Window(QWidget):
         self.resize(setting['width'], setting['height'])
         self.bg_on_flag = False
         self.really_close = False
-
         self.setStyleSheet(UI_STYLE)
 
         # 加载字体
@@ -59,7 +58,7 @@ class Window(QWidget):
         self.listwidget.setStyleSheet('QListWidget{color:#EEE;background-color:#313131;padding: 7px 15px;}')
         self.layouter.addWidget(self.listwidget)
 
-        # 底部按钮
+        # 添加壁纸按钮
         self.button_add = QPushButton()
         self.button_add.setText(f" {language['add_wp']} ")
         self.button_add.clicked.connect(self.add_background)
@@ -67,6 +66,7 @@ class Window(QWidget):
         self.button_add.setStyleSheet('QPushButton{color:#EEE;background-color:#313131;padding: 7px 15px;}QPushButton:hover{background:#111;color:'+setting["theme_colour"]+'}')
         self.layouter.addWidget(self.button_add)
 
+        # 应用壁纸按钮
         self.button_apply = QPushButton()
         self.button_apply.setText(f" {language['apply_wp']} ")
         self.button_apply.clicked.connect(self.apply_background)
@@ -74,6 +74,7 @@ class Window(QWidget):
         self.button_apply.setStyleSheet('QPushButton{color:#EEE;background-color:#313131;padding: 7px 15px;}QPushButton:hover{background:#111;color:'+setting["theme_colour"]+'}')
         self.layouter.addWidget(self.button_apply)
 
+        # 重新加载壁纸按钮
         self.button_remove = QPushButton()
         self.button_remove.setText(f" {language['restore_wp']} ")
         self.button_remove.clicked.connect(self.close_background)
@@ -81,6 +82,7 @@ class Window(QWidget):
         self.button_remove.setStyleSheet('QPushButton{color:#EEE;background-color:#313131;padding: 7px 15px;}QPushButton:hover{background:#111;color:'+setting["theme_colour"]+'}')
         self.layouter.addWidget(self.button_remove)
 
+        # 设置按钮
         self.button_set = QPushButton()
         self.button_set.setText(f" {language['setting']} ")
         self.button_set.clicked.connect(self.global_set)
@@ -88,6 +90,7 @@ class Window(QWidget):
         self.button_set.setStyleSheet('QPushButton{color:#EEE;background-color:#313131;padding: 7px 15px;}QPushButton:hover{background:#111;color:'+setting["theme_colour"]+'}')
         self.layouter.addWidget(self.button_set)
 
+        # 删除壁纸按钮
         self.button_del = QPushButton()
         self.button_del.setText(f" {language['del_wp']} ")
         self.button_del.clicked.connect(self.del_background)
@@ -95,6 +98,7 @@ class Window(QWidget):
         self.button_del.setStyleSheet('QPushButton{color:#EEE;background-color:#412121;padding: 7px 15px;}QPushButton:hover{background:#111;color:'+setting["theme_colour"]+'}')
         self.layouter.addWidget(self.button_del)
 
+        # 退出软件按钮
         self.button_exit = QPushButton()
         self.button_exit.setText(f" {language['close']} ")
         self.button_exit.clicked.connect(self.app_quit)
@@ -124,21 +128,25 @@ class Window(QWidget):
         self.wall_paper = None
         if setting['auto_apply']:self.apply_background()
 
+    # 展示主窗口
     def show_window(self, reason):
         if (reason == QSystemTrayIcon.ActivationReason.Trigger) and not setting['block_home']:self.show()
 
+    # 退出软件
     def app_quit(self):
         self.really_close = True
         if self.wall_paper:self.wall_paper.quit()
         if self.process_monitor:self.process_monitor.stop()
         QApplication.quit()
 
+    # 选中壁纸
     def list_clicked(self, qmodelindex):
         global setting
         item = self.listwidget.currentItem()
         setting["page"] = setting["page_dic"][item.text()]["url"]
         setting["start_up"] = setting["page_dic"][item.text()]["exe"]
 
+    # 设置窗口
     def global_set(self):
         if setting["block_set"]:
             msgBox = QMessageBox()
@@ -152,6 +160,7 @@ class Window(QWidget):
         self.set_window = setting_window()
         self.set_window.show()
 
+    # 删除壁纸
     def del_background(self):
         item = self.listwidget.currentItem()
         if not item:return None
@@ -171,12 +180,13 @@ class Window(QWidget):
             setting["start_up"] = setting["page_dic"][list(setting["page_dic"].keys())[0]]["exe"]
         else:setting["page"] = setting["start_up"] = ""
         save('config',setting)
-        #with open(filepath+'config.json','w',encoding='utf-8') as g:g.write(json.dumps(setting, indent=4))
 
+    # 添加壁纸
     def add_background(self):
         self.input_window = input_window()
         self.input_window.show()
 
+    # 应用壁纸
     def apply_background(self,url = None):
         self.close_background()
         try:
@@ -200,6 +210,7 @@ class Window(QWidget):
             self.process_monitor.signal.connect(self.apply_background)
         except Exception as e:log(e)
 
+    # 关闭壁纸
     def close_background(self):
         if self.bg_on_flag and self.wall_paper:
             self.wall_paper.quit()
@@ -234,25 +245,28 @@ class input_window(QWidget):
         if font:self.fontFamily = font[0]
         else:self.fontFamily = None
 
-        # 输入内容
+        # 壁纸名称
         self.line_name = QLineEdit(self)
         self.line_name.setStyleSheet('QLineEdit{color:#EEE;background-color:#313131;padding: 7px 15px;}')
         self.line_name.setPlaceholderText(f"{language['tag_name']}")
         self.line_name.setFont(QFont(self.fontFamily,setting['font_size'],QFont.Black))
         self.layouter.addWidget(self.line_name)
 
+        # 壁纸链接
         self.line_url = QLineEdit(self)
         self.line_url.setStyleSheet('QLineEdit{color:#EEE;background-color:#313131;padding: 7px 15px;}')
         self.line_url.setPlaceholderText(f"{language['wp_url']}")
         self.line_url.setFont(QFont(self.fontFamily,setting['font_size'],QFont.Black))
         self.layouter.addWidget(self.line_url)
 
+        # 壁纸启动文件
         self.line_exe = QLineEdit(self)
         self.line_exe.setStyleSheet('QLineEdit{color:#EEE;background-color:#313131;padding: 7px 15px;}')
         self.line_exe.setPlaceholderText(f"{language['wp_startup']}")
         self.line_exe.setFont(QFont(self.fontFamily,setting['font_size'],QFont.Black))
         self.layouter.addWidget(self.line_exe)
 
+        # 添加壁纸按钮
         self.button_ok = QPushButton()
         self.button_ok.setText(f"{language['add_wp']}")
         self.button_ok.clicked.connect(self.apply_change)
@@ -260,6 +274,7 @@ class input_window(QWidget):
         self.button_ok.setStyleSheet('QPushButton{color:#EEE;background-color:#313131;padding: 7px 15px;}QPushButton:hover{background:#111;color:'+setting["theme_colour"]+'}')
         self.layouter.addWidget(self.button_ok)
 
+    # 添加壁纸
     def apply_change(self):
         global main_window
         dic = {}
@@ -344,23 +359,9 @@ class setting_window(QWidget):
         if font:self.fontFamily = font[0]
         else:self.fontFamily = None
 
-        # 选项 ['zoom', 'alpha', 'icon', 'name', 'font', 'font_size', 'width', 'height', 'theme_colour', 'auto_apply', 'show_home']
+        # 选项
         self.temp_opt = setting
-        self.opt_zh = {
-            'zoom':'网页缩放(0~2)',
-            'alpha':'主页透明度(0~1)',
-            'font':'字体文件路径',
-            'font_size':'字体大小',
-            "width":'主页窗口宽度',
-            "height":'主页窗口高度',
-            "theme_colour":"主题色(#十六进制)",
-            "auto_apply":"自动接管壁纸",
-            "show_home":"启动显示主页",
-            "auto_clear_level":"自动清理等级",
-            "auto_clear_rate":"自动清理频率(单位:小时)",
-            "guide_reload":"自动刷新无活动页面"
-        }
-        self.opt_zh.update(language['opt'])
+        self.opt_zh = language['opt'].copy()
         self.zh_opt = dict(zip(self.opt_zh.values(), self.opt_zh.keys()))
         self.listwidget = QListWidget()
         for key in setting.keys():
@@ -371,6 +372,7 @@ class setting_window(QWidget):
         self.listwidget.setStyleSheet('QListWidget{color:#EEE;background-color:#313131;padding: 7px 15px;}')
         self.layouter.addWidget(self.listwidget)
 
+        # 删除缓存
         self.button_del = QPushButton()
         self.button_del.setText(f"{language['del_cache']}")
         self.button_del.clicked.connect(self.clear_data)
@@ -378,6 +380,7 @@ class setting_window(QWidget):
         self.button_del.setStyleSheet('QPushButton{color:#EEE;background-color:#313131;padding: 7px 15px;}QPushButton:hover{background:#111;color:'+setting["theme_colour"]+'}')
         self.layouter.addWidget(self.button_del)
 
+        # 应用设置
         self.button_ok = QPushButton()
         self.button_ok.setText(f"{language['apply']}")
         self.button_ok.clicked.connect(self.apply_change)
@@ -385,9 +388,11 @@ class setting_window(QWidget):
         self.button_ok.setStyleSheet('QPushButton{color:#EEE;background-color:#313131;padding: 7px 15px;}QPushButton:hover{background:#111;color:'+setting["theme_colour"]+'}')
         self.layouter.addWidget(self.button_ok)
 
+    # 清理缓存
     def clear_data(self):
         clear_cache(setting['auto_clear_level'],True)
 
+    # 修改设置
     def list_clicked(self, qmodelindex):
         item = self.listwidget.currentItem()
         key = item.text().split(':')[0]
@@ -406,8 +411,8 @@ class setting_window(QWidget):
             return None
         
         if   self.zh_opt[key] in ['zoom', 'alpha']:value = float(value)
-        elif self.zh_opt[key] in ['font_size', 'width', 'height']:value = round(float(value))
-        elif self.zh_opt[key] in ['auto_apply', 'show_home']:value = value == 'True' or value == 'true' or value == '1'
+        elif self.zh_opt[key] in ['font_size', 'width', 'height','auto_clear_rate','auto_clear_level']:value = round(float(value))
+        elif self.zh_opt[key] in ['auto_apply', 'show_home','guide_reload']:value = value == 'True' or value == 'true' or value == '1'
         elif self.zh_opt[key] == "theme_colour" and value[0] != '#':value = '#' + value
         self.temp_opt[self.zh_opt[key]] = value
 
@@ -416,7 +421,7 @@ class setting_window(QWidget):
             if not key in self.opt_zh.keys():continue
             self.listwidget.addItem(f'{self.opt_zh[key]}: {setting[key]}')
 
-
+    # 应用设置
     def apply_change(self):
         if setting["block_set"]:
             msgBox = QMessageBox()
@@ -435,6 +440,7 @@ class setting_window(QWidget):
         save('config',setting)
         self.close()
 
+# 主程序
 def main():
     global setting
     init()

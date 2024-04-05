@@ -45,6 +45,7 @@ class Background(QWidget):
         self.setWindowFlags(Qt.FramelessWindowHint)
         self.setEnabled(True)
 
+        # 获取壁纸窗口句柄
         hwnd_background = pretreatmentHandle()
         rect = win32gui.GetWindowRect(hwnd_background)
         window_size = (rect[2] - rect[0],rect[3] - rect[1])
@@ -59,8 +60,6 @@ class Background(QWidget):
         else:self.viewer.load(QUrl(setting["page"]))
         self.viewer.setZoomFactor(setting["zoom"])
 
-        #self.viewer.show()
-
         # 设置为壁纸
         self.win_hwnd = int(self.winId())
         rect = win32gui.GetWindowRect(self.win_hwnd)
@@ -70,11 +69,11 @@ class Background(QWidget):
         win32gui.SetWindowPos(self.win_hwnd,None,*rect,0)
         win32gui.SetParent(self.win_hwnd, hwnd_background)
 
-
         # 监听鼠标事件(由于窗口位置在桌面下方,因此需要监听桌面的鼠标点击,然后转发给窗口)
         self.listener = Listener(on_click=self.on_click)
         self.listener.start()
 
+    # 转发鼠标点击事件
     def on_click(self,x, y, button, pressed):
         global hwnd_WorkW
         if win32gui.GetForegroundWindow() != hwnd_WorkW:return None
@@ -83,8 +82,7 @@ class Background(QWidget):
             win32api.SendMessage(self.winId(), win32con.WM_LBUTTONDOWN, win32con.MK_LBUTTON, pos)
             win32api.SendMessage(self.winId(), win32con.WM_LBUTTONUP, None, pos)
 
-       
-
+    # 退出壁纸
     def quit(self):
         self.listener.stop()
         self.close()
@@ -103,7 +101,7 @@ class ProcessMonitor(QObject):
         self.IO = []
         self.CPU = []
 
-
+    # 获取壁纸窗口进程
     def get_process(self) -> bool:
         for process in psutil.process_iter():
             if process.pid == self.process_id:
@@ -111,10 +109,12 @@ class ProcessMonitor(QObject):
                 return True
         return False
     
+    # 启动监视
     def start(self):
         if not self.get_process():raise "Process not found"
         self.thread.start()
 
+    # 监视器主函数
     def main(self):
         global hwnd_background,setting
         while True:
@@ -128,12 +128,15 @@ class ProcessMonitor(QObject):
             if len(self.IO) > 5:self.IO.pop(0)
             self.CPU.append(data["PerCpu"])
             if len(self.CPU) > 5:self.CPU.pop(0)
-            if setting["guide_reload"] and len(self.IO) >= 5 and len(self.CPU) >= 5 and ((all(self.CPU[0] == item for item in self.CPU) and self.CPU[0] < 0.5 )or all(self.IO[0] == item for item in self.IO)):
+
+            # 检测是否需要重启壁纸窗口
+            if setting["guide_reload"] and (len(self.IO) >= 5 and len(self.CPU) >= 5 and ((all(self.CPU[0] == item for item in self.CPU) and self.CPU[0] < 0.5 )or all(self.IO[0] == item for item in self.IO))):
                 data["reload"] = [self.CPU[0], self.IO[0]]
                 data["url"] = self.control.viewer.url().toString()
                 log(json.dumps(data),msg_type='INFO')
-                self.signal.emit(data["url"])#
-            time.sleep(setting["guide_time"])
+                self.signal.emit(data["url"])
+
+            # 检测是否需要重新设置壁纸窗口
             children = []
             win32gui.EnumChildWindows(hwnd_background, lambda hwnd, param: param.append(hwnd), children)
             if not self.control.win_hwnd in children:
@@ -143,7 +146,10 @@ class ProcessMonitor(QObject):
                     win32gui.SetParent(self.control.win_hwnd, hwnd_background)
                     log(f"New parent window : {hwnd_background}",msg_type='INFO')
                 except Exception as e:log(f"window_hwnd error : {e}")
-                
+
+            time.sleep(setting["guide_time"])
+
+    # 停止监视    
     def stop(self):
         self.if_stop = True
 

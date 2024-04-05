@@ -3,9 +3,11 @@ import os
 import json
 import time
 
+# config 目录
 filepath = './config/'
 if not os.path.exists(filepath):os.mkdir(filepath)
 
+# 配置文件格式
 setting = {
     "start_up":"./http-server.exe",
     "page":"http://127.0.0.1:8080",
@@ -27,7 +29,7 @@ setting = {
     "block_set":False,
     "clear_storage":False,
     "storage_path":"",
-    "auto_clear_level":3,
+    "auto_clear_level":1,
     "auto_clear_rate":24,
     "last_clear_time":0,
     "guide_time":3,
@@ -36,51 +38,56 @@ setting = {
     "debug_port":5566
 }
 
+# 语言文件格式
 language = {
-    'name':'动态壁纸',
-    'add_wp' : '添加壁纸',
-    'del_wp' : '删除壁纸',
-    'apply_wp' : '应用壁纸',
-    'restore_wp' : '还原壁纸',
-    'setting' : '设置',
-    'close' : '退出软件',
-    'home' : '显示主页',
-    'apply' : '确认更改',
-    'warnning' : '警告',
-    'error' : '错误',
-    'setting_block' : '设置已锁定',
-    'sure_del' : '您确定要删除标签',
-    'wp_empty' : '无选中壁纸标签',
-    'has_min' : '已经最小化到系统托盘',
-    'tag_name' : '标签名称',
-    'wp_url' : '壁纸URL或绝对路径',
-    'wp_startup' : '预启动文件',
-    'unsuccessful' : '您的修改未成功',
-    'edit' : '编辑',
-    'del_cache' : '清除缓存',
-    'new_value' : '新的值',
-    'non_empty_name' : '标签名称不能为空',
-    'non_empty_url' : '壁纸链接不能为空',
-    'notfound' : '您指定的预启动文件不存在',
-    'sure_cover' : '您确定要覆盖标签',
-    'sentting_of' : '的设置吗',
-    'opt' : {
-            'zoom':'网页缩放(0~2)',
-            'alpha':'主页透明度(0~1)',
-            'font':'字体文件路径',
-            'font_size':'字体大小',
-            "width":'主页窗口宽度',
-            "height":'主页窗口高度',
+    "name":"动态壁纸",
+    "add_wp" : "添加壁纸",
+    "del_wp" : "删除壁纸",
+    "apply_wp" : "应用壁纸",
+    "restore_wp" : "还原壁纸",
+    "setting" : "设置",
+    "close" : "退出软件",
+    "home" : "显示主页",
+    "apply" : "确认更改",
+    "warnning" : "警告",
+    "error" : "错误",
+    "setting_block" : "设置已锁定",
+    "sure_del" : "您确定要删除标签",
+    "wp_empty" : "无选中壁纸标签",
+    "has_min" : "已经最小化到系统托盘",
+    "tag_name" : "标签名称",
+    "wp_url" : "壁纸URL或绝对路径",
+    "wp_startup" : "预启动文件",
+    "unsuccessful" : "您的修改未成功",
+    "edit" : "编辑",
+    "del_cache" : "清除缓存",
+    "new_value" : "新的值",
+    "non_empty_name" : "标签名称不能为空",
+    "non_empty_url" : "壁纸链接不能为空",
+    "notfound" : "您指定的预启动文件不存在",
+    "sure_cover" : "您确定要覆盖标签",
+    "sentting_of" : "的设置吗",
+    "opt" : {
+            "zoom":"网页缩放(0~2)",
+            "alpha":"主页透明度(0~1)",
+            "font":"字体文件路径",
+            "font_size":"字体大小",
+            "width":"主页窗口宽度",
+            "height":"主页窗口高度",
             "theme_colour":"主题色(#十六进制)",
             "auto_apply":"自动接管壁纸",
             "show_home":"启动显示主页",
-            "guide_reload":"自动刷新无活动页面"
+            "guide_reload":"自动刷新无活动页面",
+            "auto_clear_level":"自动清理等级",
+            "auto_clear_rate":"自动清理频率(单位:小时)"
         }
 }
 
+# 配置文件保存方法
 def save(file_name,data):
     with open(f'{filepath}/{file_name}.json','w',encoding='utf-8') as g:g.write(json.dumps(data, indent=4,ensure_ascii=False))
 
+# 配置文件初始化方法
 def init():
     global setting,language
     if not os.path.isfile(filepath+'config.json'):save('config',setting)
@@ -125,6 +132,7 @@ def clear_cache(clear_level : int,clear_now : bool=False):
     setting['last_clear_time'] = time.time()
     save('config',setting)
 
+# 判断是否需要清除缓存
 def if_clear_cache() -> bool:
     global setting
     if time.time() - setting["last_clear_time"] >= 60*60*setting["auto_clear_rate"]:return True
