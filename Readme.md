@@ -18,6 +18,7 @@
 - It displays a clean interface without showing other wallpapers or additional services from the internet.
 - Settings are stored in a json format, facilitating easy modification.
 - Both window icons and names are customizable.
+- It has a lot of bugs.
 
 **LightWallPaper**相较于其它壁纸引擎的不同之处在于以下几点：
 
@@ -27,6 +28,7 @@
 - 不会显示网络上其它壁纸等诸多其它服务，界面简单
 - 使用json格式存储设置，方便修改
 - 窗体图标与名称均支持自定义
+- 拥有大量Bug
 
 ### 三、Usage 使用
 
